@@ -8,6 +8,31 @@ import 'habit_list_screen.dart';
 import 'record_model.dart';
 import 'home_screen.dart';
 import 'daily_emotion_model.dart';
+import 'settings_screen.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart' show IOSFlutterLocalNotificationsPlugin, MacOSFlutterLocalNotificationsPlugin;
+import 'dart:io';
+
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
+Future<void> initializeNotifications() async {
+  const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
+  final DarwinInitializationSettings initializationSettingsIOS = DarwinInitializationSettings();
+  final InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+    iOS: initializationSettingsIOS,
+  );
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  if (Platform.isIOS) {
+    await flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()?.requestPermissions(
+      alert: true, badge: true, sound: true,
+    );
+  } else if (Platform.isMacOS) {
+    await flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<MacOSFlutterLocalNotificationsPlugin>()?.requestPermissions(
+      alert: true, badge: true, sound: true,
+    );
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,6 +43,7 @@ void main() async {
   await Hive.openBox<HabitModel>('habits');
   await Hive.openBox<RecordModel>('records');
   await Hive.openBox<DailyEmotionModel>('daily_emotion');
+  await initializeNotifications();
   final userName = await UserIdUtil.getUserName();
   runApp(MyApp(userName: userName));
 }
@@ -109,6 +135,16 @@ class _MyHomePageState extends State<MyHomePage> {
         // Here we take the value from the MyHomePage object that was created by
         // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: Center(
         // Center is a layout widget. It takes a single child and positions it

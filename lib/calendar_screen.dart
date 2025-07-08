@@ -127,8 +127,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final days = getMonthDays(_month);
     int total = 0;
     int success = 0;
+    final validHabitIds = _habitBox.values.map((h) => h.id).toSet();
     for (final d in days) {
-      final recs = _recordBox.values.where((r) => r.date.year == d.year && r.date.month == d.month && r.date.day == d.day).toList();
+      final recs = _recordBox.values.where((r) =>
+        r.date.year == d.year && r.date.month == d.month && r.date.day == d.day &&
+        validHabitIds.contains(r.habitId)
+      ).toList();
       final dayTotal = recs.where((r) => r.status == 'success' || r.status == 'fail').length;
       final daySuccess = recs.where((r) => r.status == 'success').length;
       total += dayTotal;
@@ -170,6 +174,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
       body: Column(
         children: [
           Padding(
+            padding: const EdgeInsets.only(top: 16, bottom: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('${_month.year}년 ${_month.month}월', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+          Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -198,7 +211,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
               itemCount: days.length,
               itemBuilder: (ctx, i) {
                 final d = days[i];
-                final recs = monthRecords[d] ?? [];
+                final validHabitIds = _habitBox.values.map((h) => h.id).toSet();
+                final recs = (monthRecords[d] ?? []).where((r) => validHabitIds.contains(r.habitId)).toList();
                 int total = recs.where((r) => r.status == 'success' || r.status == 'fail').length;
                 int success = recs.where((r) => r.status == 'success').length;
                 double rate = total == 0 ? 0.0 : (success / total) * 100;

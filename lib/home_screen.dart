@@ -7,6 +7,12 @@ import 'habit_list_screen.dart';
 import 'daily_emotion_model.dart';
 import 'dart:math';
 import 'calendar_screen.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart' show Time;
+import 'dart:io';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+import 'package:beumz_app/main.dart' show flutterLocalNotificationsPlugin;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -47,10 +53,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    tz.initializeTimeZones();
     _habitBox = Hive.box<HabitModel>('habits');
     _recordBox = Hive.box<RecordModel>('records');
     _emotionBox = Hive.box<DailyEmotionModel>('daily_emotion');
     _cheerMessage = _cheerMessages[Random().nextInt(_cheerMessages.length)];
+    scheduleDailyNotificationIfNeeded(_habitBox, _recordBox, _emotionBox);
   }
 
   List<RecordModel> getTodayRecords() {
@@ -303,5 +311,36 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+}
+
+Future<void> scheduleDailyNotificationIfNeeded(Box<HabitModel> habitBox, Box<RecordModel> recordBox, Box<DailyEmotionModel> emotionBox) async {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final habits = habitBox.values.toList();
+  final records = recordBox.values.where((r) =>
+    r.date.year == today.year && r.date.month == today.month && r.date.day == today.day
+  ).toList();
+  final emotion = emotionBox.values.where((e) =>
+    e.date.year == today.year && e.date.month == today.month && e.date.day == today.day
+  ).toList();
+  final hasAnyRecord = habits.any((h) => records.any((r) => r.habitId == h.id && (r.status == 'success' || r.status == 'fail')));
+  final hasEmotion = emotion.isNotEmpty;
+  if (!hasAnyRecord && !hasEmotion) {
+    final scheduledDate = tz.TZDateTime.local(now.year, now.month, now.day, 20);
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      0,
+      '오늘의 비움을 기록하세요',
+      '아직 비움 성공/실패나 오늘의 기분을 입력하지 않았어요!',
+      scheduledDate,
+      const NotificationDetails(
+        android: AndroidNotificationDetails('beumz_channel', 'Beumz 알림', channelDescription: '비움 기록 알림'),
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+  } else {
+    await flutterLocalNotificationsPlugin.cancel(0);
   }
 } 

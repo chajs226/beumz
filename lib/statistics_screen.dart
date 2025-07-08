@@ -20,9 +20,13 @@ class StatisticsScreen extends StatelessWidget {
     final records = recordBox.values.toList();
     final days = getRecentDays(14); // 최근 2주
 
+    final validHabitIds = habits.map((h) => h.id).toSet();
     // 일자별 전체 성공률 계산
     List<double> dailyRates = days.map((d) {
-      final dayRecords = records.where((r) => r.date.year == d.year && r.date.month == d.month && r.date.day == d.day).toList();
+      final dayRecords = records.where((r) =>
+        r.date.year == d.year && r.date.month == d.month && r.date.day == d.day &&
+        validHabitIds.contains(r.habitId)
+      ).toList();
       final total = dayRecords.where((r) => r.status == 'success' || r.status == 'fail').length;
       if (total == 0) return 0.0;
       final success = dayRecords.where((r) => r.status == 'success').length;
