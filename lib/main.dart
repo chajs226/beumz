@@ -3,10 +3,18 @@ import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'user_id_util.dart';
 import 'onboarding_screen.dart';
+import 'habit_model.dart';
+import 'habit_list_screen.dart';
+import 'record_model.dart';
+import 'home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await UserIdUtil.initHive();
+  Hive.registerAdapter(HabitModelAdapter());
+  Hive.registerAdapter(RecordModelAdapter());
+  await Hive.openBox<HabitModel>('habits');
+  await Hive.openBox<RecordModel>('records');
   final userName = await UserIdUtil.getUserName();
   runApp(MyApp(userName: userName));
 }
@@ -40,11 +48,11 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: userName == null
-          ? OnboardingScreen(onFinish: () {
-              // 온보딩 완료 시 홈으로 이동
-              runApp(MyApp(userName: 'dummy')); // 실제론 getUserName 재호출 필요
+          ? OnboardingScreen(onFinish: () async {
+              final name = await UserIdUtil.getUserName();
+              runApp(MyApp(userName: name));
             })
-          : const MyHomePage(title: 'Beumz 홈'),
+          : const HomeScreen(),
     );
   }
 }
