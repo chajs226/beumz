@@ -73,6 +73,8 @@ class _RecordEditDialogState extends State<RecordEditDialog> {
               status: widget.status,
               emotion: widget.status == 'fail' ? _emotion : '',
               memo: widget.status == 'fail' ? _memoController.text.trim() : '',
+              name: '', // 실제 사용처에서 올바른 값 전달 필요
+              icon: '', // 실제 사용처에서 올바른 값 전달 필요
             ));
             Navigator.of(context).pop();
           },

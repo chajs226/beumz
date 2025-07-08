@@ -13,6 +13,10 @@ class RecordModel extends HiveObject {
   String emotion;
   @HiveField(4)
   String memo;
+  @HiveField(5)
+  String name; // 기록 시점의 습관 이름
+  @HiveField(6)
+  String icon; // 기록 시점의 습관 아이콘
 
   RecordModel({
     required this.date,
@@ -20,5 +24,7 @@ class RecordModel extends HiveObject {
     required this.status,
     required this.emotion,
     required this.memo,
+    this.name = '',
+    this.icon = '',
   });
 } 

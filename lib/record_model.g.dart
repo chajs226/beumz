@@ -22,13 +22,15 @@ class RecordModelAdapter extends TypeAdapter<RecordModel> {
       status: fields[2] as String,
       emotion: fields[3] as String,
       memo: fields[4] as String,
+      name: fields[5] as String,
+      icon: fields[6] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, RecordModel obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.date)
       ..writeByte(1)
@@ -38,7 +40,11 @@ class RecordModelAdapter extends TypeAdapter<RecordModel> {
       ..writeByte(3)
       ..write(obj.emotion)
       ..writeByte(4)
-      ..write(obj.memo);
+      ..write(obj.memo)
+      ..writeByte(5)
+      ..write(obj.name)
+      ..writeByte(6)
+      ..write(obj.icon);
   }
 
   @override

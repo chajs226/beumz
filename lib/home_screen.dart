@@ -6,6 +6,7 @@ import 'record_edit_dialog.dart';
 import 'habit_list_screen.dart';
 import 'daily_emotion_model.dart';
 import 'dart:math';
+import 'calendar_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -126,7 +127,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (existing != null) {
                     existing
                       ..status = status!
-                      ..memo = memo;
+                      ..memo = memo
+                      ..name = habit.name
+                      ..icon = habit.icon;
                     await existing.save();
                   } else {
                     await _recordBox.add(RecordModel(
@@ -135,6 +138,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       status: status!,
                       emotion: '',
                       memo: memo,
+                      name: habit.name,
+                      icon: habit.icon,
                     ));
                   }
                   setState(() {});
@@ -191,6 +196,15 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('오늘의 비움 목표'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_month),
+            tooltip: '캘린더/통계',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const CalendarScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             tooltip: '목표 관리',
