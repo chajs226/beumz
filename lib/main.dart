@@ -7,14 +7,17 @@ import 'habit_model.dart';
 import 'habit_list_screen.dart';
 import 'record_model.dart';
 import 'home_screen.dart';
+import 'daily_emotion_model.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await UserIdUtil.initHive();
   Hive.registerAdapter(HabitModelAdapter());
   Hive.registerAdapter(RecordModelAdapter());
+  Hive.registerAdapter(DailyEmotionModelAdapter());
   await Hive.openBox<HabitModel>('habits');
   await Hive.openBox<RecordModel>('records');
+  await Hive.openBox<DailyEmotionModel>('daily_emotion');
   final userName = await UserIdUtil.getUserName();
   runApp(MyApp(userName: userName));
 }
