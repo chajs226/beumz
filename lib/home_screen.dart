@@ -13,6 +13,7 @@ import 'dart:io';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:beumz_app/main.dart' show flutterLocalNotificationsPlugin;
+import 'package:collection/collection.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -196,10 +197,41 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // 주간 시작(월요일)~종료(일요일) 날짜 반환
+  List<DateTime> getCurrentWeekDays() {
+    final now = _today;
+    final monday = now.subtract(Duration(days: now.weekday - 1));
+    return List.generate(7, (i) => monday.add(Duration(days: i)));
+  }
+
+  // limitType에서 주간 제한 횟수 추출 (예: '주 3회 이하' → 3)
+  int? parseWeeklyLimit(String limitType) {
+    final reg = RegExp(r'주 (\d+)회 이하');
+    final match = reg.firstMatch(limitType);
+    if (match != null) {
+      return int.tryParse(match.group(1)!);
+    }
+    return null;
+  }
+
+  // 이번 주 해당 습관의 성공/실패/총 시도 횟수 집계
+  Map<String, int> getWeeklyStatus(String habitId) {
+    final weekDays = getCurrentWeekDays();
+    final records = _recordBox.values.where((r) =>
+      r.habitId == habitId &&
+      weekDays.any((d) => r.date.year == d.year && r.date.month == d.month && r.date.day == d.day)
+    );
+    int success = records.where((r) => r.status == 'success').length;
+    int fail = records.where((r) => r.status == 'fail').length;
+    int total = records.length;
+    return {'success': success, 'fail': fail, 'total': total};
+  }
+
   @override
   Widget build(BuildContext context) {
     final habits = _habitBox.values.toList();
     final todayRecords = getTodayRecords();
+    final weekDays = getCurrentWeekDays();
     return Scaffold(
       appBar: AppBar(
         title: const Text('오늘의 비움 목표'),
@@ -255,50 +287,96 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           Expanded(
-            child: habits.isEmpty
-                ? const Center(child: Text('등록된 비움 목표가 없습니다.'))
-                : ListView.builder(
-                    itemCount: habits.length,
-                    itemBuilder: (ctx, i) {
-                      final h = habits[i];
-                      final recList = todayRecords.where((r) => r.habitId == h.id).toList();
-                      final rec = recList.isNotEmpty ? recList.first : null;
-                      IconData statusIcon;
-                      Color statusColor;
-                      if (rec == null) {
-                        statusIcon = Icons.radio_button_unchecked;
-                        statusColor = Colors.grey;
-                      } else if (rec.status == 'success') {
-                        statusIcon = Icons.check_circle;
-                        statusColor = Colors.green;
-                      } else {
-                        statusIcon = Icons.cancel;
-                        statusColor = Colors.red;
-                      }
-                      return Card(
-                        color: Color(int.parse('0xFF${h.color.substring(1)}')),
-                        child: ListTile(
-                          onTap: () => _showRecordDialog(h, rec),
-                          onLongPress: rec?.memo?.isNotEmpty == true ? () => _showMemoDialog(rec!.memo) : null,
-                          leading: Text(h.icon, style: const TextStyle(fontSize: 28)),
-                          title: Text(h.name),
-                          subtitle: Row(
-                            children: [
-                              Icon(statusIcon, color: statusColor),
-                              const SizedBox(width: 8),
-                              Text(h.limitType, style: const TextStyle(fontSize: 13)),
-                            ],
-                          ),
-                          trailing: rec?.memo?.isNotEmpty == true
-                              ? IconButton(
-                                  icon: const Icon(Icons.sticky_note_2),
-                                  onPressed: () => _showMemoDialog(rec!.memo),
-                                )
-                              : null,
+            child: ListView.builder(
+              itemCount: habits.length,
+              itemBuilder: (context, i) {
+                final h = habits[i];
+                final rec = getRecordForHabit(h.id);
+                final weekly = getWeeklyStatus(h.id);
+                final limit = parseWeeklyLimit(h.limitType);
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(h.icon, style: const TextStyle(fontSize: 24)),
+                            const SizedBox(width: 8),
+                            Text(h.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            const SizedBox(width: 8),
+                            if (limit != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.deepPurple.shade50,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text('주 $limit회 이하', style: const TextStyle(fontSize: 13, color: Colors.deepPurple)),
+                              ),
+                          ],
                         ),
-                      );
-                    },
+                        const SizedBox(height: 8),
+                        // 주간 달력/상태 표시
+                        Row(
+                          children: weekDays.map((d) {
+                            final r = _recordBox.values.firstWhereOrNull(
+                              (r) => r.habitId == h.id && r.date.year == d.year && r.date.month == d.month && r.date.day == d.day,
+                            );
+                            Color color;
+                            IconData icon;
+                            if (r == null) {
+                              color = Colors.grey.shade300;
+                              icon = Icons.remove;
+                            } else if (r.status == 'success') {
+                              color = Colors.green.shade300;
+                              icon = Icons.check;
+                            } else {
+                              color = Colors.red.shade200;
+                              icon = Icons.close;
+                            }
+                            return Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 2),
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: color,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Column(
+                                children: [
+                                  Text(['월','화','수','목','금','토','일'][d.weekday-1], style: const TextStyle(fontSize: 10)),
+                                  Icon(icon, size: 16),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 8),
+                        if (limit != null)
+                          Text('이번 주 남은 횟수: ${limit - (weekly['success']! + weekly['fail']!)}회', style: const TextStyle(fontSize: 13, color: Colors.deepPurple)),
+                        Text(h.limitType, style: const TextStyle(fontSize: 13)),
+                        // 기존 기록 입력/수정 버튼 등은 그대로 유지
+                        Row(
+                          children: [
+                            ElevatedButton(
+                              onPressed: () => _showRecordDialog(h, rec),
+                              child: Text(rec == null ? '기록' : '수정'),
+                            ),
+                            if (rec != null && rec.memo.isNotEmpty)
+                              IconButton(
+                                icon: const Icon(Icons.sticky_note_2),
+                                onPressed: () => _showMemoDialog(rec.memo),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
+                );
+              },
+            ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
