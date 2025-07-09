@@ -308,6 +308,28 @@ class _HomeScreenState extends State<HomeScreen> {
     final todayRecords = getTodayRecords();
     final weekDays = getCurrentWeekDays();
     
+    // 특정 날짜의 모든 목표 달성 여부 확인
+    bool isDayAllGoalsAchieved(DateTime day) {
+      if (habits.isEmpty) return false;
+      
+      return habits.every((h) {
+        final r = _recordBox.values.firstWhereOrNull(
+          (r) => r.habitId == h.id && r.date.year == day.year && r.date.month == day.month && r.date.day == day.day,
+        );
+        return r != null && r.status == 'success';
+      });
+    }
+
+    // 특정 날짜에 실패한 목표가 있는지 확인
+    bool isDayHasFailure(DateTime day) {
+      return habits.any((h) {
+        final r = _recordBox.values.firstWhereOrNull(
+          (r) => r.habitId == h.id && r.date.year == day.year && r.date.month == day.month && r.date.day == day.day,
+        );
+        return r != null && r.status == 'fail';
+      });
+    }
+    
     // 오늘 모든 목표 달성 여부 확인
     final bool allGoalsAchieved = habits.isNotEmpty && habits.every((h) {
       final rec = getRecordForHabit(h.id);
@@ -548,16 +570,33 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color = Colors.red.shade200;
                                 icon = Icons.close;
                               }
+
+                              // 해당 날짜의 종합 달성 상태 확인
+                              final isAllAchieved = isDayAllGoalsAchieved(d);
+                              final hasFailure = isDayHasFailure(d);
+                              
                               return Container(
                                 margin: const EdgeInsets.symmetric(horizontal: 2),
                                 padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
                                   color: color,
                                   borderRadius: BorderRadius.circular(8),
+                                  border: isAllAchieved 
+                                    ? Border.all(color: Colors.amber.shade600, width: 2)
+                                    : hasFailure 
+                                      ? Border.all(color: Colors.red.shade400, width: 1)
+                                      : null,
                                 ),
                                 child: Column(
                                   children: [
-                                    Text(['월','화','수','목','금','토','일'][d.weekday-1], style: const TextStyle(fontSize: 10)),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(['월','화','수','목','금','토','일'][d.weekday-1], style: const TextStyle(fontSize: 10)),
+                                        if (isAllAchieved)
+                                          const Icon(Icons.star, color: Colors.amber, size: 8),
+                                      ],
+                                    ),
                                     Icon(icon, size: 16),
                                   ],
                                 ),

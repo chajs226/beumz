@@ -34,6 +34,30 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _emotionBox = Hive.box<DailyEmotionModel>('daily_emotion');
   }
 
+  // 특정 날짜의 모든 목표 달성 여부 확인
+  bool isDayAllGoalsAchieved(DateTime day) {
+    final habits = _habitBox.values.toList();
+    if (habits.isEmpty) return false;
+    
+    return habits.every((h) {
+      final r = _recordBox.values.firstWhereOrNull(
+        (r) => r.habitId == h.id && r.date.year == day.year && r.date.month == day.month && r.date.day == day.day,
+      );
+      return r != null && r.status == 'success';
+    });
+  }
+
+  // 특정 날짜에 실패한 목표가 있는지 확인
+  bool isDayHasFailure(DateTime day) {
+    final habits = _habitBox.values.toList();
+    return habits.any((h) {
+      final r = _recordBox.values.firstWhereOrNull(
+        (r) => r.habitId == h.id && r.date.year == day.year && r.date.month == day.month && r.date.day == day.day,
+      );
+      return r != null && r.status == 'fail';
+    });
+  }
+
   List<DateTime> getMonthDays(DateTime month) {
     final first = DateTime(month.year, month.month, 1);
     final last = DateTime(month.year, month.month + 1, 0);
@@ -500,6 +524,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   final day = monthDays[dayNum - 1];
                   final records = monthRecords[day] ?? [];
                   final emotion = getEmotionForDay(day);
+                  
+                  // 해당 날짜의 전체 목표 종합 상태 확인
+                  final isAllAchieved = isDayAllGoalsAchieved(day);
+                  final hasFailure = isDayHasFailure(day);
+                  
                   Color bgColor;
                   if (records.any((r) => r.status == 'success')) {
                     bgColor = Colors.green.shade100;
@@ -531,15 +560,34 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             decoration: BoxDecoration(
                               color: bgColor,
                               borderRadius: BorderRadius.circular(13),
-                              border: (emotion != null && emotion.isNotEmpty)
-                                  ? Border.all(color: Colors.deepPurple, width: 2)
-                                  : null,
+                              border: isAllAchieved 
+                                ? Border.all(color: Colors.amber.shade600, width: 2)
+                                : hasFailure 
+                                  ? Border.all(color: Colors.red.shade400, width: 1)
+                                  : (emotion != null && emotion.isNotEmpty)
+                                    ? Border.all(color: Colors.deepPurple, width: 2)
+                                    : null,
                             ),
-                            child: Text(
-                              emotion ?? '—',
-                              style: const TextStyle(fontSize: 14),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Text(
+                                  emotion ?? '—',
+                                  style: const TextStyle(fontSize: 14),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                                if (isAllAchieved)
+                                  Positioned(
+                                    top: 0,
+                                    right: 0,
+                                    child: Icon(
+                                      Icons.star,
+                                      color: Colors.amber,
+                                      size: 8,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 2),
