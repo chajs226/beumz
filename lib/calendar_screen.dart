@@ -5,6 +5,7 @@ import 'record_model.dart';
 import 'dart:collection';
 import 'statistics_screen.dart';
 import 'daily_emotion_model.dart';
+import 'package:collection/collection.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({Key? key}) : super(key: key);
@@ -142,12 +143,66 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return (success / total) * 100;
   }
 
+  // 이번 주(월~일) 날짜 리스트 반환
+  List<DateTime> getCurrentWeekDays() {
+    final now = DateTime.now();
+    final monday = now.subtract(Duration(days: now.weekday - 1));
+    return List.generate(7, (i) => monday.add(Duration(days: i)));
+  }
+
+  // limitType에서 주간 성공 기준(분모) 추출
+  int getWeeklyGoalCount(HabitModel habit) {
+    if (habit.limitType.contains('매일 금지')) {
+      return 7;
+    }
+    final reg = RegExp(r'주 (\d+)회 이하');
+    final match = reg.firstMatch(habit.limitType);
+    if (match != null) {
+      return int.parse(match.group(1)!);
+    }
+    return 7; // 기본값: 매일 금지
+  }
+
+  // 주간 성공률 계산 (분자/분모, 100% 초과 허용)
+  Map<String, dynamic> getWeekSuccessRatio(DateTime base) {
+    final weekDays = getWeekDays(base);
+    final habits = _habitBox.values.toList();
+    int numerator = 0;
+    int denominator = 0;
+    for (final h in habits) {
+      final goal = getWeeklyGoalCount(h);
+      denominator += goal;
+      final weekRecords = _recordBox.values.where((r) =>
+        r.habitId == h.id &&
+        weekDays.any((d) => r.date.year == d.year && r.date.month == d.month && r.date.day == d.day) &&
+        r.status == 'success'
+      ).length;
+      numerator += weekRecords;
+    }
+    double percent = denominator == 0 ? 0.0 : (numerator / denominator) * 100;
+    return {'numerator': numerator, 'denominator': denominator, 'percent': percent};
+  }
+
+  // 기준 날짜에 해당하는 주(월~일) 리스트 반환
+  List<DateTime> getWeekDays(DateTime base) {
+    final monday = base.subtract(Duration(days: base.weekday - 1));
+    return List.generate(7, (i) => monday.add(Duration(days: i)));
+  }
+
+  // 기준 날짜의 감정 이모지 반환
+  String? getEmotionForDay(DateTime day) {
+    final e = _emotionBox.values.firstWhereOrNull(
+      (e) => e.date.year == day.year && e.date.month == day.month && e.date.day == day.day,
+    );
+    return e?.emotion;
+  }
+
+  DateTime _weekBase = DateTime.now();
+
   @override
   Widget build(BuildContext context) {
-    final days = getMonthDays(_month);
-    final monthRecords = getMonthRecords();
-    final successMap = getSuccessCountByHabit();
-    final failMap = getFailCountByHabit();
+    final weekDays = getWeekDays(_weekBase);
+    final weekRatio = getWeekSuccessRatio(_weekBase);
     return Scaffold(
       appBar: AppBar(
         title: const Text('캘린더'),
@@ -161,14 +216,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.chevron_left),
-            onPressed: () => setState(() => _month = DateTime(_month.year, _month.month - 1)),
-          ),
-          IconButton(
-            icon: const Icon(Icons.chevron_right),
-            onPressed: () => setState(() => _month = DateTime(_month.year, _month.month + 1)),
-          ),
         ],
       ),
       body: Column(
@@ -178,7 +225,23 @@ class _CalendarScreenState extends State<CalendarScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('${_month.year}년 ${_month.month}월', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                IconButton(
+                  icon: const Icon(Icons.chevron_left),
+                  onPressed: () {
+                    setState(() {
+                      _weekBase = _weekBase.subtract(const Duration(days: 7));
+                    });
+                  },
+                ),
+                Text('${weekDays.first.month}월 ${weekDays.first.day}일 ~ ${weekDays.last.month}월 ${weekDays.last.day}일', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                IconButton(
+                  icon: const Icon(Icons.chevron_right),
+                  onPressed: () {
+                    setState(() {
+                      _weekBase = _weekBase.add(const Duration(days: 7));
+                    });
+                  },
+                ),
               ],
             ),
           ),
@@ -187,71 +250,83 @@ class _CalendarScreenState extends State<CalendarScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('이 달의 종합 성공률: ', style: TextStyle(fontWeight: FontWeight.bold)),
-                Text('${getMonthSuccessRate().toStringAsFixed(1)}%', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                const Text('이번 주 종합 성공률: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text('${weekRatio['numerator']}/${weekRatio['denominator']}회', style: const TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(width: 8),
+                Text('${weekRatio['percent'].toStringAsFixed(1)}%', style: TextStyle(color: weekRatio['percent'] > 100 ? Colors.orange : Colors.blue, fontWeight: FontWeight.bold)),
+                if (weekRatio['percent'] > 100)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 6),
+                    child: Text('초과 달성!', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+                  ),
               ],
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: List.generate(7, (i) => Text(['일','월','화','수','목','금','토'][i], style: const TextStyle(fontWeight: FontWeight.bold))),
+              children: weekDays.map((d) {
+                final emotion = getEmotionForDay(d);
+                return Column(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Text(emotion ?? '—', style: const TextStyle(fontSize: 24)),
+                    ),
+                    const SizedBox(height: 4),
+                    Text('${d.day}일', style: const TextStyle(fontSize: 12)),
+                  ],
+                );
+              }).toList(),
             ),
           ),
+          const Divider(),
           Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.all(8),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 7,
-                mainAxisSpacing: 4,
-                crossAxisSpacing: 4,
-                childAspectRatio: 0.7,
-              ),
-              itemCount: days.length,
-              itemBuilder: (ctx, i) {
-                final d = days[i];
-                final validHabitIds = _habitBox.values.map((h) => h.id).toSet();
-                final recs = (monthRecords[d] ?? []).where((r) => validHabitIds.contains(r.habitId)).toList();
-                int total = recs.where((r) => r.status == 'success' || r.status == 'fail').length;
-                int success = recs.where((r) => r.status == 'success').length;
-                double rate = total == 0 ? 0.0 : (success / total) * 100;
-                Color? color;
-                if (total == 0) {
-                  color = Colors.grey[200];
-                } else if (rate > 50) {
-                  color = Colors.green[200];
-                } else {
-                  color = Colors.red[200];
-                }
-                final DailyEmotionModel? emotionModel = _emotionBox.values.cast<DailyEmotionModel?>().firstWhere(
-                  (e) => e?.date.year == d.year && e?.date.month == d.month && e?.date.day == d.day,
-                  orElse: () => null,
-                );
-                final emotion = emotionModel?.emotion;
-                return GestureDetector(
-                  onTap: () => _showDayDetail(d, recs),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey[400]!),
-                    ),
-                    child: Center(
-                      child: SingleChildScrollView(
-                        physics: const NeverScrollableScrollPhysics(),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
+            child: ListView.builder(
+              itemCount: weekDays.length,
+              itemBuilder: (context, i) {
+                final d = weekDays[i];
+                final records = _recordBox.values.where((r) => r.date.year == d.year && r.date.month == d.month && r.date.day == d.day).toList();
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: ListTile(
+                    title: Text('${d.month}월 ${d.day}일 (${['월','화','수','목','금','토','일'][d.weekday-1]})'),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            Text('${d.day}'),
-                            if (emotion != null && emotion.isNotEmpty)
-                              Text(emotion, style: const TextStyle(fontSize: 16)),
-                            if (total > 0)
-                              Text('${rate.toStringAsFixed(0)}%', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                            const Text('기분: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text(getEmotionForDay(d) ?? '—', style: const TextStyle(fontSize: 18)),
                           ],
                         ),
-                      ),
+                        const SizedBox(height: 4),
+                        ...records.map((r) {
+                          final habit = _habitBox.values.firstWhereOrNull((h) => h.id == r.habitId);
+                          return Row(
+                            children: [
+                              Text(habit?.icon ?? '', style: const TextStyle(fontSize: 18)),
+                              const SizedBox(width: 4),
+                              Text(habit?.name ?? ''),
+                              const SizedBox(width: 8),
+                              Text(r.status == 'success' ? '성공' : '실패', style: TextStyle(color: r.status == 'success' ? Colors.green : Colors.red)),
+                              if (r.memo.isNotEmpty) ...[
+                                const SizedBox(width: 8),
+                                const Icon(Icons.sticky_note_2, size: 16),
+                              ],
+                            ],
+                          );
+                        }).toList(),
+                        if (records.isEmpty)
+                          const Text('기록 없음', style: TextStyle(color: Colors.grey)),
+                      ],
                     ),
                   ),
                 );
