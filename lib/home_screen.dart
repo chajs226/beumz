@@ -266,18 +266,30 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text('오늘의 감정: ', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    GestureDetector(
-                      onTap: _showEmotionDialog,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.deepPurple, width: 2),
+                    ElevatedButton(
+                      onPressed: _showEmotionDialog,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.deepPurple,
+                        side: const BorderSide(color: Colors.deepPurple, width: 2),
+                        shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(24),
                         ),
-                        child: Text(
-                          getTodayEmotion()?.emotion ?? '선택',
-                          style: const TextStyle(fontSize: 32),
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            getTodayEmotion()?.emotion ?? '😊',
+                            style: const TextStyle(fontSize: 20),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            getTodayEmotion()?.emotion != null ? '변경' : '선택',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        ],
                       ),
                     ),
                   ],
