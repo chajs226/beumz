@@ -99,16 +99,34 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Map<String, int> getSuccessCountByHabit() {
     final map = <String, int>{};
+    // 현재 존재하는 목표들
     for (final h in _habitBox.values) {
       map[h.name] = _recordBox.values.where((r) => r.habitId == h.id && r.status == 'success').length;
+    }
+    // 삭제된 목표들의 기록도 추가
+    final existingHabitIds = _habitBox.values.map((h) => h.id).toSet();
+    final deletedHabitRecords = _recordBox.values.where((r) => !existingHabitIds.contains(r.habitId));
+    for (final r in deletedHabitRecords) {
+      if (r.status == 'success' && r.name.isNotEmpty) {
+        map[r.name] = (map[r.name] ?? 0) + 1;
+      }
     }
     return map;
   }
 
   Map<String, int> getFailCountByHabit() {
     final map = <String, int>{};
+    // 현재 존재하는 목표들
     for (final h in _habitBox.values) {
       map[h.name] = _recordBox.values.where((r) => r.habitId == h.id && r.status == 'fail').length;
+    }
+    // 삭제된 목표들의 기록도 추가
+    final existingHabitIds = _habitBox.values.map((h) => h.id).toSet();
+    final deletedHabitRecords = _recordBox.values.where((r) => !existingHabitIds.contains(r.habitId));
+    for (final r in deletedHabitRecords) {
+      if (r.status == 'fail' && r.name.isNotEmpty) {
+        map[r.name] = (map[r.name] ?? 0) + 1;
+      }
     }
     return map;
   }
@@ -397,11 +415,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           const SizedBox(height: 4),
                           ...records.map((r) {
                             final habit = _habitBox.values.firstWhereOrNull((h) => h.id == r.habitId);
+                            final icon = habit?.icon ?? r.icon;
+                            final name = habit?.name ?? r.name;
                             return Row(
                               children: [
-                                Text(habit?.icon ?? '', style: const TextStyle(fontSize: 18)),
+                                Text(icon, style: const TextStyle(fontSize: 18)),
                                 const SizedBox(width: 4),
-                                Text(habit?.name ?? ''),
+                                Text(name),
                                 const SizedBox(width: 8),
                                 Text(r.status == 'success' ? '성공' : '실패', style: TextStyle(color: r.status == 'success' ? Colors.green : Colors.red)),
                                 if (r.memo.isNotEmpty) ...[

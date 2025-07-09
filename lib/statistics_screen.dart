@@ -20,12 +20,13 @@ class StatisticsScreen extends StatelessWidget {
     final records = recordBox.values.toList();
     final days = getRecentDays(14); // 최근 2주
 
-    final validHabitIds = habits.map((h) => h.id).toSet();
-    // 일자별 전체 성공률 계산
+    // 모든 기록의 habitId를 고려 (삭제된 목표 포함)
+    final allHabitIds = records.map((r) => r.habitId).toSet();
+    
+    // 일자별 전체 성공률 계산 (삭제된 목표의 기록도 포함)
     List<double> dailyRates = days.map((d) {
       final dayRecords = records.where((r) =>
-        r.date.year == d.year && r.date.month == d.month && r.date.day == d.day &&
-        validHabitIds.contains(r.habitId)
+        r.date.year == d.year && r.date.month == d.month && r.date.day == d.day
       ).toList();
       final total = dayRecords.where((r) => r.status == 'success' || r.status == 'fail').length;
       if (total == 0) return 0.0;
@@ -33,7 +34,7 @@ class StatisticsScreen extends StatelessWidget {
       return (success / total) * 100;
     }).toList();
 
-    // 목표별 전체 성공률 계산
+    // 현재 존재하는 목표별 전체 성공률 계산
     List<double> habitRates = habits.map((h) {
       final total = records.where((r) => r.habitId == h.id && (r.status == 'success' || r.status == 'fail')).length;
       if (total == 0) return 0.0;
