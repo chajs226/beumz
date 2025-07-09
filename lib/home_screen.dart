@@ -307,6 +307,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final habits = _habitBox.values.toList();
     final todayRecords = getTodayRecords();
     final weekDays = getCurrentWeekDays();
+    
+    // 오늘 모든 목표 달성 여부 확인
+    final bool allGoalsAchieved = habits.isNotEmpty && habits.every((h) {
+      final rec = getRecordForHabit(h.id);
+      return rec != null && rec.status == 'success';
+    });
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('오늘의 비움 목표'),
@@ -370,6 +377,73 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
+                // 모든 목표 달성 시 축하 배너
+                if (allGoalsAchieved)
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.amber.shade100, Colors.orange.shade100],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.amber.shade300, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.amber.shade200.withOpacity(0.5),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade200,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.celebration,
+                            color: Colors.orange,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '🎉 완벽한 하루!',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                '오늘 모든 비움 목표를 달성했어요!',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.orange,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Text(
+                          '🏆',
+                          style: TextStyle(fontSize: 28),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
