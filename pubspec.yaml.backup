@@ -1,6 +1,25 @@
 name: beumz_app
 description: "A new Flutter project."
-# The following line prevents the package from being accidentally published to
+# The following line prevents the package# For details regarding fonts from package dependencies,
+# see https://flutter.dev/to/font-from-package
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  min_sdk_android: 21
+  web:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
+    background_color: "#673AB7"
+    theme_color: "#673AB7"
+  windows:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
+    icon_size: 48
+  macos:
+    generate: true
+    image_path: "assets/icon/app_icon.png"rom being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
@@ -95,22 +114,3 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
-
-flutter_launcher_icons:
-  android: "launcher_icon"
-  ios: true
-  image_path: "assets/icon/app_icon.png"
-  min_sdk_android: 21
-  remove_alpha_ios: true
-  web:
-    generate: true
-    image_path: "assets/icon/app_icon.png"
-    background_color: "#673AB7"
-    theme_color: "#673AB7"
-  windows:
-    generate: true
-    image_path: "assets/icon/app_icon.png"
-    icon_size: 48
-  macos:
-    generate: true
-    image_path: "assets/icon/app_icon.png"
