@@ -34,6 +34,30 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _emotionBox = Hive.box<DailyEmotionModel>('daily_emotion');
   }
 
+  // 특정 날짜의 모든 목표 달성 여부 확인
+  bool isDayAllGoalsAchieved(DateTime day) {
+    final habits = _habitBox.values.toList();
+    if (habits.isEmpty) return false;
+    
+    return habits.every((h) {
+      final r = _recordBox.values.firstWhereOrNull(
+        (r) => r.habitId == h.id && r.date.year == day.year && r.date.month == day.month && r.date.day == day.day,
+      );
+      return r != null && r.status == 'success';
+    });
+  }
+
+  // 특정 날짜에 실패한 목표가 있는지 확인
+  bool isDayHasFailure(DateTime day) {
+    final habits = _habitBox.values.toList();
+    return habits.any((h) {
+      final r = _recordBox.values.firstWhereOrNull(
+        (r) => r.habitId == h.id && r.date.year == day.year && r.date.month == day.month && r.date.day == day.day,
+      );
+      return r != null && r.status == 'fail';
+    });
+  }
+
   List<DateTime> getMonthDays(DateTime month) {
     final first = DateTime(month.year, month.month, 1);
     final last = DateTime(month.year, month.month + 1, 0);
@@ -99,16 +123,34 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Map<String, int> getSuccessCountByHabit() {
     final map = <String, int>{};
+    // 현재 존재하는 목표들
     for (final h in _habitBox.values) {
       map[h.name] = _recordBox.values.where((r) => r.habitId == h.id && r.status == 'success').length;
+    }
+    // 삭제된 목표들의 기록도 추가
+    final existingHabitIds = _habitBox.values.map((h) => h.id).toSet();
+    final deletedHabitRecords = _recordBox.values.where((r) => !existingHabitIds.contains(r.habitId));
+    for (final r in deletedHabitRecords) {
+      if (r.status == 'success' && r.name.isNotEmpty) {
+        map[r.name] = (map[r.name] ?? 0) + 1;
+      }
     }
     return map;
   }
 
   Map<String, int> getFailCountByHabit() {
     final map = <String, int>{};
+    // 현재 존재하는 목표들
     for (final h in _habitBox.values) {
       map[h.name] = _recordBox.values.where((r) => r.habitId == h.id && r.status == 'fail').length;
+    }
+    // 삭제된 목표들의 기록도 추가
+    final existingHabitIds = _habitBox.values.map((h) => h.id).toSet();
+    final deletedHabitRecords = _recordBox.values.where((r) => !existingHabitIds.contains(r.habitId));
+    for (final r in deletedHabitRecords) {
+      if (r.status == 'fail' && r.name.isNotEmpty) {
+        map[r.name] = (map[r.name] ?? 0) + 1;
+      }
     }
     return map;
   }
@@ -397,11 +439,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           const SizedBox(height: 4),
                           ...records.map((r) {
                             final habit = _habitBox.values.firstWhereOrNull((h) => h.id == r.habitId);
+                            final icon = habit?.icon ?? r.icon;
+                            final name = habit?.name ?? r.name;
                             return Row(
                               children: [
-                                Text(habit?.icon ?? '', style: const TextStyle(fontSize: 18)),
+                                Text(icon, style: const TextStyle(fontSize: 18)),
                                 const SizedBox(width: 4),
-                                Text(habit?.name ?? ''),
+                                Text(name),
                                 const SizedBox(width: 8),
                                 Text(r.status == 'success' ? '성공' : '실패', style: TextStyle(color: r.status == 'success' ? Colors.green : Colors.red)),
                                 if (r.memo.isNotEmpty) ...[
@@ -480,6 +524,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   final day = monthDays[dayNum - 1];
                   final records = monthRecords[day] ?? [];
                   final emotion = getEmotionForDay(day);
+                  
+                  // 해당 날짜의 전체 목표 종합 상태 확인
+                  final isAllAchieved = isDayAllGoalsAchieved(day);
+                  final hasFailure = isDayHasFailure(day);
+                  
                   Color bgColor;
                   if (records.any((r) => r.status == 'success')) {
                     bgColor = Colors.green.shade100;
@@ -511,15 +560,34 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             decoration: BoxDecoration(
                               color: bgColor,
                               borderRadius: BorderRadius.circular(13),
-                              border: (emotion != null && emotion.isNotEmpty)
-                                  ? Border.all(color: Colors.deepPurple, width: 2)
-                                  : null,
+                              border: isAllAchieved 
+                                ? Border.all(color: Colors.amber.shade600, width: 2)
+                                : hasFailure 
+                                  ? Border.all(color: Colors.red.shade400, width: 1)
+                                  : (emotion != null && emotion.isNotEmpty)
+                                    ? Border.all(color: Colors.deepPurple, width: 2)
+                                    : null,
                             ),
-                            child: Text(
-                              emotion ?? '—',
-                              style: const TextStyle(fontSize: 14),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Text(
+                                  emotion ?? '—',
+                                  style: const TextStyle(fontSize: 14),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                                if (isAllAchieved)
+                                  Positioned(
+                                    top: 0,
+                                    right: 0,
+                                    child: Icon(
+                                      Icons.star,
+                                      color: Colors.amber,
+                                      size: 8,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 2),

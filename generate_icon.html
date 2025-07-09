@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beumz App Icon Generator</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            text-align: center;
+        }
+        #icon {
+            margin: 20px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        button {
+            padding: 10px 20px;
+            background: #673AB7;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        button:hover {
+            background: #5E35B1;
+        }
+        .download-link {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Beumz App Icon</h1>
+        <svg id="icon" width="1024" height="1024" xmlns="http://www.w3.org/2000/svg">
+            <!-- 배경 원형 그라디언트 -->
+            <defs>
+                <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#7E57C2;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#673AB7;stop-opacity:1" />
+                </linearGradient>
+                <linearGradient id="innerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#9C27B0;stop-opacity:0.8" />
+                    <stop offset="100%" style="stop-color:#673AB7;stop-opacity:0.8" />
+                </linearGradient>
+                <!-- 그림자 필터 -->
+                <filter id="dropshadow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.2"/>
+                </filter>
+            </defs>
+            
+            <!-- 배경 -->
+            <rect width="1024" height="1024" rx="230" ry="230" fill="url(#bgGradient)"/>
+            
+            <!-- 중앙의 비움 심볼 - 간단한 기하학적 형태 -->
+            <!-- 외부 원 -->
+            <circle cx="512" cy="512" r="280" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="3"/>
+            
+            <!-- 중앙 심볼 - 비움을 의미하는 간단한 도형들 -->
+            <!-- 상단 작은 원들 (별들) -->
+            <circle cx="450" cy="350" r="12" fill="rgba(255,255,255,0.9)"/>
+            <circle cx="512" cy="320" r="15" fill="rgba(255,255,255,1)"/>
+            <circle cx="574" cy="350" r="12" fill="rgba(255,255,255,0.9)"/>
+            
+            <!-- 중앙 메인 심볼 - 단순한 그릇/컨테이너 형태 -->
+            <path d="M 380 480 Q 380 450 420 450 L 604 450 Q 644 450 644 480 L 644 600 Q 644 650 604 650 L 420 650 Q 380 650 380 600 Z" 
+                  fill="none" 
+                  stroke="rgba(255,255,255,0.95)" 
+                  stroke-width="8" 
+                  stroke-linecap="round"/>
+            
+            <!-- 내부 간단한 라인들 - 정리정돈의 의미 -->
+            <line x1="420" y1="500" x2="604" y2="500" stroke="rgba(255,255,255,0.6)" stroke-width="3" stroke-linecap="round"/>
+            <line x1="420" y1="540" x2="580" y2="540" stroke="rgba(255,255,255,0.6)" stroke-width="3" stroke-linecap="round"/>
+            <line x1="420" y1="580" x2="560" y2="580" stroke="rgba(255,255,255,0.6)" stroke-width="3" stroke-linecap="round"/>
+            
+            <!-- 하단 작은 점들 - 미니멀한 장식 -->
+            <circle cx="460" cy="720" r="8" fill="rgba(255,255,255,0.7)"/>
+            <circle cx="512" cy="730" r="10" fill="rgba(255,255,255,0.8)"/>
+            <circle cx="564" cy="720" r="8" fill="rgba(255,255,255,0.7)"/>
+            
+            <!-- 텍스트는 너무 작아 보이지 않을 수 있으므로 심볼로만 구성 -->
+        </svg>
+        
+        <br>
+        <button onclick="downloadIcon()">아이콘 다운로드 (PNG)</button>
+        <a id="downloadLink" class="download-link" download="app_icon.png"></a>
+        
+        <p>위 아이콘은 beumz 앱의 "비움" 컨셉을 표현한 디자인입니다.<br>
+        깊은 보라색 배경에 간단한 그릇 형태와 정리된 라인들로 감성적 습관 관리의 의미를 담았습니다.</p>
+    </div>
+
+    <script>
+        function downloadIcon() {
+            const svg = document.getElementById('icon');
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = 1024;
+            canvas.height = 1024;
+            
+            const data = new XMLSerializer().serializeToString(svg);
+            const img = new Image();
+            
+            img.onload = function() {
+                ctx.drawImage(img, 0, 0);
+                
+                const link = document.getElementById('downloadLink');
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            };
+            
+            img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(data)));
+        }
+    </script>
+</body>
+</html>

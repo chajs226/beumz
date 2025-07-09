@@ -42,8 +42,66 @@ class _HabitListScreenState extends State<HabitListScreen> {
   }
 
   void _deleteHabit(HabitModel habit) async {
-    await habit.delete();
-    setState(() {});
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('목표 삭제'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('정말로 "${habit.name}" 목표를 삭제하시겠습니까?'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '이전에 기록한 데이터는 삭제되지 않고 보존됩니다.',
+                      style: TextStyle(fontSize: 13, color: Colors.blue),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('삭제', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      // habit만 삭제하고, 연관된 record들은 보존
+      await habit.delete();
+      setState(() {});
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('목표가 삭제되었습니다. 이전 기록은 보존됩니다.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
   }
 
   @override
