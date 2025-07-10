@@ -1,4 +1,4 @@
-package com.monk.beumz_app
+package com.monk.beumz
 
 import io.flutter.embedding.android.FlutterActivity
 
